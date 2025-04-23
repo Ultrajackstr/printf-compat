@@ -199,7 +199,42 @@ pub unsafe fn format(
                     else if (arg as usize) < 4096 {
                         Specifier::Bytes(b"(invalid_ptr)") // Prevent panic on likely invalid pointers
                     } else {
-                        Specifier::String(unsafe { CStr::from_ptr(args.arg()) })
+                        Specifier::String(unsafe { CStr::from_ptr(arg) })
+                        // // Pointer seems plausible, but might not be null-terminated
+                        // // or could point to invalid memory further along.
+                        // // Search for null terminator within a reasonable bound.
+                        // const MAX_STRING_LEN: usize = 1024; // Define a safety limit
+                        // let mut len = 0;
+                        // let mut found_null = false;
+                        // while len < MAX_STRING_LEN {
+                        //     // SAFETY: Dereferencing `arg.add(len)` is unsafe if `arg`
+                        //     // points to invalid/unmapped memory or memory shorter than `len`.
+                        //     // This bounded loop mitigates reading indefinitely, but the
+                        //     // initial dereferences can still cause UB if `arg` is fundamentally invalid.
+                        //     // This is inherent when dealing with potentially invalid C pointers.
+                        //     let byte = unsafe { *arg.add(len) };
+                        //     if byte == 0 {
+                        //         found_null = true;
+                        //         break;
+                        //     }
+                        //     len += 1;
+                        // }
+
+                        // if found_null {
+                        //     // Found null within bounds. Create a slice including the null terminator.
+                        //     // SAFETY: We've checked bytes up to `len` and found a null at `len`.
+                        //     // `from_raw_parts` requires the memory to be valid for reads of `len + 1` bytes.
+                        //     let slice_with_nul =
+                        //         unsafe { core::slice::from_raw_parts(arg as *const u8, len + 1) };
+                        //     // `from_bytes_with_nul` checks for interior nulls and returns a Result.
+                        //     match CStr::from_bytes_with_nul(slice_with_nul) {
+                        //         Ok(cstr) => Specifier::String(cstr), // Success
+                        //         Err(_) => Specifier::Bytes(b"(invalid_c_str_sequence)"), // Should be rare if loop worked
+                        //     }
+                        // } else {
+                        //     // No null terminator found within MAX_STRING_LEN.
+                        //     Specifier::Bytes(b"(string_too_long_or_unterminated)")
+                        // }
                     }
                 }
                 b'c' => Specifier::Char(unsafe { args.arg() }),
